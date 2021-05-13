@@ -26,6 +26,7 @@ void wol()
                                    // WOL.sendMagicPacket(MACAddress, 7); // Change the port number
 }
 
+
 void setup(void)
 {
   tft.init();
@@ -44,6 +45,9 @@ void setup(void)
     tft.fillScreen(TFT_BLACK);
   }
   tft.println("Connected to the\nWiFi network");
+  tft.setCursor(0, 40);
+  tft.print("IP: ");
+  tft.println(WiFi.localIP());
 }
 IPAddress ip(192, 168, 1, 100);
 void loop()
