@@ -2,31 +2,35 @@
 #include <SPI.h>
 #include <WakeOnLan.h>
 #include <ESP32Ping.h>
-#include <TFT_eSPI.h> // Hardware-specific library
-#include <HTTPCLient.h>
+#include <TFT_eSPI.h> 
 #include <UniversalTelegramBot.h>
 #include <WiFiClientSecure.h>
+#include <PubSubClient.h>
 #include "config.h"
 
-TFT_eSPI tft = TFT_eSPI(); // Invoke custom library
+TFT_eSPI tft = TFT_eSPI(); 
 
-#define TFT_GREY 0x5AEB // New colour
 const char *ssid = WIFI_SSID;
 const char *password = WIFI_PASSWORD;
+const char *mqttServer = MQTT_SERVER;
+const int mqttPort = 1883;
 WiFiUDP UDP;
 WakeOnLan WOL(UDP);
 WiFiClientSecure secured_client;
+WiFiClient wificlient;
 UniversalTelegramBot bot(BOT_TOKEN, secured_client);
+PubSubClient client(wificlient);
 
 void wol()
 {
   const char *MACAddress = MAC_ADDRESS;
 
-  WOL.sendMagicPacket(MACAddress); // Send Wake On Lan packet with the above MAC address. Default to port 9.
-                                   // WOL.sendMagicPacket(MACAddress, 7); // Change the port number
+  WOL.sendMagicPacket(MACAddress); 
 }
 
-
+void onMessage(String &topic, String &payload){
+  Serial.println(topic+" "+payload);
+}
 void setup(void)
 {
   tft.init();
@@ -39,21 +43,38 @@ void setup(void)
 
   while (WiFi.status() != WL_CONNECTED)
   {
-    tft.println("Connecting to WiFi..");
     tft.setCursor(0, 0);
+    tft.println("Connecting to WiFi..");
     delay(500);
     tft.fillScreen(TFT_BLACK);
   }
+  tft.setCursor(0,0);
   tft.println("Connected to the\nWiFi network");
-  tft.setCursor(0, 40);
   tft.print("IP: ");
   tft.println(WiFi.localIP());
+  delay(2000);
+
+  client.setServer(mqttServer, mqttPort);
+  while(!client.connected()){
+    tft.fillScreen(TFT_BLACK);
+    tft.setCursor(0,0);
+    tft.println("Connecting to MQTT");
+    if(client.connect("ArduinoBoot")){
+      tft.println("connected");
+    } else{
+      tft.println("ERROR");
+      tft.println("SEE SERIAL LOG");
+      Serial.println(client.state());
+      delay(500);
+    }
+  }
+
+
 }
 IPAddress ip(192, 168, 1, 100);
 void loop()
 {
 
-  // Set the font colour to be white with a black background, set text size multiplier to 1
   if (WiFi.status() != WL_CONNECTED)
   {
     ESP.restart();
@@ -66,9 +87,9 @@ void loop()
     tft.fillScreen(TFT_BLACK);
     tft.setCursor(0, 0);
     tft.println(pingTime + " ms");
-    tft.setCursor(0, 40);
     tft.println("Server is running");
     delay(2000);
+    client.publish("kekw", "Server is running");
   }
   else
   {
@@ -76,15 +97,14 @@ void loop()
     tft.setCursor(0, 0);
     tft.print("Server ");
     tft.print(ip);
-    tft.setCursor(0, 20);
     tft.println("is not running");
-    tft.setCursor(0, 40);
     tft.println("Sending WOL Package");
     for (int i = 0; i < 3; i++)
     {
       wol();
     }
     bot.sendMessage(CHAT_ID, "Warning, Server is not reachable, trying to start it with WOL magic packet 💥💥💥");
+    client.publish("kekw", "Warning, Server is not reachable, trying to start it with WOL magic packet 💥💥💥");
     delay(60000);
   }
 }
