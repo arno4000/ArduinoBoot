@@ -59,7 +59,7 @@ void setup(void)
     tft.fillScreen(TFT_BLACK);
     tft.setCursor(0,0);
     tft.println("Connecting to MQTT");
-    if(client.connect("ArduinoBoot")){
+    if(client.connect("ArduinoBoot", MQTT_USER, MQTT_PASSWORD)){
       tft.println("connected");
     } else{
       tft.println("ERROR");
@@ -89,7 +89,8 @@ void loop()
     tft.println(pingTime + " ms");
     tft.println("Server is running");
     delay(2000);
-    client.publish("kekw", "Server is running");
+    const char* message = "192.168.1.100: running";
+    client.publish("kekw", message);
   }
   else
   {
@@ -104,7 +105,8 @@ void loop()
       wol();
     }
     bot.sendMessage(CHAT_ID, "Warning, Server is not reachable, trying to start it with WOL magic packet 💥💥💥");
-    client.publish("kekw", "Warning, Server is not reachable, trying to start it with WOL magic packet 💥💥💥");
-    delay(60000);
+    const char* message = "192.168.1.100: down";
+    client.publish("kekw", message);
+    delay(10000);
   }
 }
